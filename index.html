@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TOTK Tracker">
+  <title>TOTK Side Quest Tracker</title>
+  <style>
+    :root {
+      --bg-deep: #0a0e17;
+      --bg-surface: #121a2b;
+      --bg-surface-alt: #1a2540;
+      --bg-glass: rgba(18, 26, 43, 0.82);
+      --border: #2a3a5c;
+      --border-light: #344770;
+      --text-primary: #e8e4d9;
+      --text-secondary: #8a9ab5;
+      --text-dim: #5a6a85;
+      --accent-cyan: #5ce0d2;
+      --accent-gold: #f5c842;
+      --accent-orange: #e8943a;
+      --accent-green: #4ade80;
+      --accent-red: #f87171;
+      --check-glow: rgba(74, 222, 128, 0.4);
+      --cyan-glow: rgba(92, 224, 210, 0.15);
+      --gold-glow: rgba(245, 200, 66, 0.15);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-primary);
+      background: var(--bg-deep);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Layered Sheikah-inspired background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(ellipse at 50% -10%, rgba(92, 224, 210, 0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 90%, rgba(245, 200, 66, 0.03) 0%, transparent 40%),
+        linear-gradient(135deg, #0a0e17 0%, #121a2b 50%, #0d1520 100%);
+    }
+
+    /* Sheikah circuit grid pattern */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(92, 224, 210, 0.025) 59px, rgba(92, 224, 210, 0.025) 60px),
+        repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(92, 224, 210, 0.025) 59px, rgba(92, 224, 210, 0.025) 60px);
+      pointer-events: none;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* App container */
+    .app {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 16px env(safe-area-inset-bottom, 16px);
+      padding-bottom: 80px;
+    }
+
+    /* Sticky header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 16px 14px;
+      margin: 0 -16px;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .header-title h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Sheikah Eye SVG */
+    .sheikah-eye {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    /* Search bar */
+    .search-wrapper {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 42px 12px 42px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(92, 224, 210, 0.1);
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: var(--bg-surface-alt);
+      border-radius: 50%;
+      color: var(--text-secondary);
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .search-clear.visible {
+      display: flex;
+    }
+
+    /* Progress section */
+    .progress-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .progress-bar-track {
+      flex: 1;
+      height: 10px;
+      background: var(--bg-surface);
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold));
+      border-radius: 5px;
+      width: 0%;
+      transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+
+    .progress-bar-fill.complete {
+      animation: shimmer 2s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    .progress-bar-fill.complete {
+      background: linear-gradient(90deg, var(--accent-gold), #ffe066, var(--accent-gold), #ffe066, var(--accent-gold));
+      background-size: 200% 100%;
+    }
+
+    .progress-stats {
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      min-width: 110px;
+      text-align: right;
+    }
+
+    .progress-stats .count {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .progress-stats .pct {
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    /* Region groups */
+    .regions {
+      padding-top: 12px;
+    }
+
+    .region {
+      margin-bottom: 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(18, 26, 43, 0.5);
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .region.all-done {
+      border-color: var(--accent-gold);
+    }
+
+    .region-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.15s;
+    }
+
+    .region-header:active {
+      background: var(--bg-surface-alt);
+    }
+
+    .region-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .region-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .region.all-done .region-name {
+      color: var(--accent-gold);
+    }
+
+    .region-count {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+
+    .region-count.pop {
+      transform: scale(1.2);
+    }
+
+    .region-chevron {
+      width: 20px;
+      height: 20px;
+      color: var(--text-dim);
+      transition: transform 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .region.collapsed .region-chevron {
+      transform: rotate(-90deg);
+    }
+
+    /* Accordion animation */
+    .region-body {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 0.3s ease;
+    }
+
+    .region.collapsed .region-body {
+      grid-template-rows: 0fr;
+    }
+
+    .region-body-inner {
+      overflow: hidden;
+    }
+
+    /* Quest items */
+    .quest {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.15s;
+      border-top: 1px solid rgba(42, 58, 92, 0.4);
+    }
+
+    .quest:active {
+      background: var(--bg-surface-alt);
+    }
+
+    .quest.hidden {
+      display: none;
+    }
+
+    /* Checkbox */
+    .quest-check {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid var(--border-light);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+
+    .quest.done .quest-check {
+      border-color: var(--accent-green);
+      background: var(--accent-green);
+      animation: checkPulse 0.5s ease-out;
+    }
+
+    .quest-check-icon {
+      width: 14px;
+      height: 14px;
+      color: var(--bg-deep);
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .quest.done .quest-check-icon {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    @keyframes checkPulse {
+      0% { box-shadow: 0 0 0 0 var(--check-glow); }
+      70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+    }
+
+    /* Quest name */
+    .quest-name {
+      font-size: 15px;
+      line-height: 1.3;
+      color: var(--text-primary);
+      transition: color 0.2s;
+    }
+
+    .quest.done .quest-name {
+      color: var(--text-dim);
+      text-decoration: line-through;
+      text-decoration-color: var(--text-dim);
+    }
+
+    /* Search highlight */
+    mark {
+      background: var(--gold-glow);
+      color: var(--accent-gold);
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+
+    /* No results */
+    .no-results {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--text-dim);
+      font-size: 15px;
+      display: none;
+    }
+
+    .no-results.visible {
+      display: block;
+    }
+
+    .no-results-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    /* Reset button */
+    .reset-wrapper {
+      text-align: center;
+      padding: 24px 0 16px;
+    }
+
+    .reset-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 13px;
+      padding: 8px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .reset-btn:active {
+      color: var(--accent-red);
+      border-color: var(--accent-red);
+    }
+
+    /* Animations for reduced motion preference */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Fade in on load */
+    .app {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-title">
+        <!-- Sheikah Eye SVG inline -->
+        <svg class="sheikah-eye" viewBox="0 0 100 100" fill="none">
+          <circle cx="50" cy="50" r="14" fill="none" stroke="var(--accent-cyan)" stroke-width="3"/>
+          <circle cx="50" cy="50" r="5" fill="var(--accent-cyan)"/>
+          <path d="M50 36 L50 12" stroke="var(--accent-cyan)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M15 55 C15 55, 32 25, 50 25 C68 25, 85 55, 85 55" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M22 62 C22 62, 35 78, 50 78 C65 78, 78 62, 78 62" stroke="var(--accent-cyan)" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+          <circle cx="50" cy="50" r="22" fill="none" stroke="var(--accent-cyan)" stroke-width="1.5" opacity="0.3"/>
+        </svg>
+        <h1>TOTK Side Quest Tracker</h1>
+      </div>
+
+      <div class="search-wrapper">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" class="search-input" placeholder="Search quests..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="searchInput">
+        <button class="search-clear" id="searchClear" aria-label="Clear search">&times;</button>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-stats" id="progressStats">
+          <span class="count">0/139</span> <span class="pct">(0%)</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="regions" id="regions"></div>
+
+    <div class="no-results" id="noResults">
+      <div class="no-results-icon">?</div>
+      No quests match your search
+    </div>
+
+    <div class="reset-wrapper">
+      <button class="reset-btn" id="resetBtn">Reset All Progress</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Quest Data ──────────────────────────────────────────────
+    const QUEST_DATA = [
+      {
+        region: "Lookout Landing",
+        quests: [
+          { id: "ll_01", name: "Spotting Spot" },
+          { id: "ll_02", name: "Village Attacked By Pirates" },
+          { id: "ll_03", name: "Today's Menu" },
+          { id: "ll_04", name: "The Incomplete Stable" },
+          { id: "ll_05", name: "Wanted: Stone Talus" },
+          { id: "ll_06", name: "Wanted: Molduga" },
+          { id: "ll_07", name: "Wanted: Hinox" },
+          { id: "ll_08", name: "Unknown Sky Giant" },
+          { id: "ll_09", name: "Unknown Three-Headed Monster" },
+          { id: "ll_10", name: "Unknown Huge Silhouette" }
+        ]
+      },
+      {
+        region: "Tabantha / Rito / Hebra",
+        quests: [
+          { id: "tr_01", name: "The Horse Guard's Request" },
+          { id: "tr_02", name: "A Picture for Outskirt Stable" },
+          { id: "tr_03", name: "Feathered Fugitives" },
+          { id: "tr_04", name: "A Picture for Riverside Stable" },
+          { id: "tr_05", name: "Horse-Drawn Dreams" },
+          { id: "tr_06", name: "A Picture for New Serenne Stable" },
+          { id: "tr_07", name: "Genli's Home Cooking" },
+          { id: "tr_08", name: "Treasure of the Secret Springs" },
+          { id: "tr_09", name: "Molli The Fletcher's Quest" },
+          { id: "tr_10", name: "Legacy Of The Rito" },
+          { id: "tr_11", name: "Fish For Fletching" },
+          { id: "tr_12", name: "The Rito Rope Bridge" },
+          { id: "tr_13", name: "A Picture for Tabantha Bridge Stable" },
+          { id: "tr_14", name: "A Picture for Snowfield Stable" },
+          { id: "tr_15", name: "Crossing the Cold Pool" },
+          { id: "tr_16", name: "Open the Door" },
+          { id: "tr_17", name: "Supply-Eyeing Fliers" },
+          { id: "tr_18", name: "The Blocked Cave" },
+          { id: "tr_19", name: "The Duchess Who Disappeared" },
+          { id: "tr_20", name: "Kaneli's Flight Training" },
+          { id: "tr_21", name: "Cave Mushrooms That Glow" },
+          { id: "tr_22", name: "The Captured Tent" },
+          { id: "tr_23", name: "Who Finds the Haven?" }
+        ]
+      },
+      {
+        region: "Korok Forest",
+        quests: [
+          { id: "kf_01", name: "Whirly Swirly Things" },
+          { id: "kf_02", name: "The Secret Room" },
+          { id: "kf_03", name: "Walton's Treasure Hunt" }
+        ]
+      },
+      {
+        region: "Goron / Eldin",
+        quests: [
+          { id: "ge_01", name: "Amber Dealer" },
+          { id: "ge_02", name: "The Ancient City Gorondia!" },
+          { id: "ge_03", name: "The Ancient City Gorondia?" },
+          { id: "ge_04", name: "Soul Of The Gorons" },
+          { id: "ge_05", name: "Moon-Gazing Gorons" },
+          { id: "ge_06", name: "The Hidden Treasure at Lizard Lakes" },
+          { id: "ge_07", name: "Simmerstone Springs" },
+          { id: "ge_08", name: "Cash In on Ripened Flint" },
+          { id: "ge_09", name: "Meat For Meat" },
+          { id: "ge_10", name: "Rock Roast or Dust" },
+          { id: "ge_11", name: "Mine-Cart Land: Open For Business!" },
+          { id: "ge_12", name: "Mine-Cart Land: Quickshot Course" },
+          { id: "ge_13", name: "Mine-Cart Land: Death Mountain" },
+          { id: "ge_14", name: "A Picture for Woodland Stable" },
+          { id: "ge_15", name: "A Picture for Foothill Stable" },
+          { id: "ge_16", name: "Fell into a Well!" },
+          { id: "ge_17", name: "The Abandoned Laborer" }
+        ]
+      },
+      {
+        region: "Akkala / Treasure Hunters",
+        quests: [
+          { id: "ak_01", name: "The Treasure Hunters" },
+          { id: "ak_02", name: "Misko's Cave of Chests" },
+          { id: "ak_03", name: "Misko's Treasure: The Fierce Deity" },
+          { id: "ak_04", name: "Misko's Treasure: Twins Manuscript" },
+          { id: "ak_05", name: "Misko's Treasure: Pirate Manuscript" },
+          { id: "ak_06", name: "Misko's Treasure: Heroines Manuscript" },
+          { id: "ak_07", name: "Misko's Treasure of Awakening I" },
+          { id: "ak_08", name: "Misko's Treasure of Awakening II" },
+          { id: "ak_09", name: "Misko's Treasure of Awakening III" },
+          { id: "ak_10", name: "The Tarrey Town Race Is On!" },
+          { id: "ak_11", name: "Secrets Within" },
+          { id: "ak_12", name: "Master of the Vehicle Prototype" },
+          { id: "ak_13", name: "Home On Arrange" },
+          { id: "ak_14", name: "Strongest In The World" },
+          { id: "ak_15", name: "The Gathering Pirates" },
+          { id: "ak_16", name: "A Picture for East Akkala Stable" },
+          { id: "ak_17", name: "Eldin's Colossal Fossil" },
+          { id: "ak_18", name: "Hebra's Colossal Fossil" },
+          { id: "ak_19", name: "Gerudo's Colossal Fossil" },
+          { id: "ak_20", name: "One-Hit Wonder!" },
+          { id: "ak_21", name: "A Picture for South Akkala Stable" }
+        ]
+      },
+      {
+        region: "Zora's Domain / Lanayru",
+        quests: [
+          { id: "zd_01", name: "True Treasure" },
+          { id: "zd_02", name: "Secret Treasure Under The Great Fish" },
+          { id: "zd_03", name: "The Never-Ending Lecture" },
+          { id: "zd_04", name: "The Moonlit Princess" },
+          { id: "zd_05", name: "The Fort at Ja'Abu Ridge" },
+          { id: "zd_06", name: "Glory Of The Zora" },
+          { id: "zd_07", name: "A Crabulous Deal!" },
+          { id: "zd_08", name: "A Wife Wafted Away" },
+          { id: "zd_09", name: "A Token Of Friendship" },
+          { id: "zd_10", name: "A Picture for Wetland Stable" },
+          { id: "zd_11", name: "An Uninvited Guest" },
+          { id: "zd_12", name: "The Blue Stone" },
+          { id: "zd_13", name: "The Ultimate Dish?" },
+          { id: "zd_14", name: "Mired In Muck" }
+        ]
+      },
+      {
+        region: "Kakariko Village",
+        quests: [
+          { id: "kk_01", name: "Out of the Inn" },
+          { id: "kk_02", name: "Follow The Cuccos" },
+          { id: "kk_03", name: "A Trip Through History" },
+          { id: "kk_04", name: "Codger's Quarrel" },
+          { id: "kk_05", name: "Gloom-Borne Illness" }
+        ]
+      },
+      {
+        region: "Hateno / Necluda",
+        quests: [
+          { id: "hn_01", name: "A New Champion's Tunic" },
+          { id: "hn_02", name: "Teach Me A Lesson I" },
+          { id: "hn_03", name: "Teach Me A Lesson II" },
+          { id: "hn_04", name: "Dantz's Prize Cows" },
+          { id: "hn_05", name: "Homegrown in Hateno" },
+          { id: "hn_06", name: "Photographing a Chuchu" },
+          { id: "hn_07", name: "Uma's Garden" },
+          { id: "hn_08", name: "Manny's Beloved" },
+          { id: "hn_09", name: "Lurelin Resort Project" },
+          { id: "hn_10", name: "Dad's Blue Shirt" },
+          { id: "hn_11", name: "A Way to Trade, Washed Away" },
+          { id: "hn_12", name: "Rattled Ralera" },
+          { id: "hn_13", name: "A Picture for Dueling Peaks Stable" },
+          { id: "hn_14", name: "A Bottled Cry for Help" },
+          { id: "hn_15", name: "Seeking The Pirate Hideout" }
+        ]
+      },
+      {
+        region: "Faron / Lakeside",
+        quests: [
+          { id: "fl_01", name: "Ousting the Giants" },
+          { id: "fl_02", name: "A Picture for Lakeside Stable" },
+          { id: "fl_03", name: "A Picture for Highland Stable" }
+        ]
+      },
+      {
+        region: "Gerudo",
+        quests: [
+          { id: "gr_01", name: "The Heroines' Secret" },
+          { id: "gr_02", name: "Treasure Of The Gerudo Desert" },
+          { id: "gr_03", name: "Pride of the Gerudo" },
+          { id: "gr_04", name: "Dalia's Game" },
+          { id: "gr_05", name: "The Mysterious Eighth" },
+          { id: "gr_06", name: "The Missing Owner" },
+          { id: "gr_07", name: "To The Ruins!" },
+          { id: "gr_08", name: "Decorate With Passion" },
+          { id: "gr_09", name: "Lost In The Dunes" },
+          { id: "gr_10", name: "A Picture for the Closed Stable I" },
+          { id: "gr_11", name: "A Picture for the Closed Stable II" },
+          { id: "gr_12", name: "Piaffe, Packed Away" },
+          { id: "gr_13", name: "Gleeok Guts" },
+          { id: "gr_14", name: "Disaster in Gerudo Canyon" },
+          { id: "gr_15", name: "The Great Tumbleweed Purge" },
+          { id: "gr_16", name: "Heat-Endurance Contest!" },
+          { id: "gr_17", name: "Cold-Endurance Contest!" },
+          { id: "gr_18", name: "The Iceless Icehouse" }
+        ]
+      },
+      {
+        region: "World-Spanning / Special",
+        quests: [
+          { id: "ws_01", name: "Where Are The Wells?" },
+          { id: "ws_02", name: "Ancient Blades Below" },
+          { id: "ws_03", name: "The North Lomei Prophecy" },
+          { id: "ws_04", name: "The Lomei Labyrinth Island Prophecy" },
+          { id: "ws_05", name: "The South Lomei Prophecy" },
+          { id: "ws_06", name: "Goddess Statue Of Wisdom" },
+          { id: "ws_07", name: "Goddess Statue Of Power" },
+          { id: "ws_08", name: "Goddess Statue Of Courage" },
+          { id: "ws_09", name: "The Mother Goddess Statue" },
+          { id: "ws_10", name: "The Shrine Explorer" }
+        ]
+      }
+    ];
+
+    const TOTAL_QUESTS = QUEST_DATA.reduce((sum, r) => sum + r.quests.length, 0);
+    const STORAGE_KEY = 'totk-quest-progress';
+
+    // ── State ───────────────────────────────────────────────────
+    let progress = {};
+    let regionCollapsed = {};
+
+    function loadProgress() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) progress = JSON.parse(saved);
+      } catch (e) {
+        progress = {};
+      }
+    }
+
+    function saveProgress() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+      } catch (e) { /* private browsing fallback: state lives in memory */ }
+    }
+
+    function getStats() {
+      const completed = Object.values(progress).filter(Boolean).length;
+      return { completed, total: TOTAL_QUESTS, pct: Math.round((completed / TOTAL_QUESTS) * 1000) / 10 };
+    }
+
+    function getRegionStats(region) {
+      const completed = region.quests.filter(q => progress[q.id]).length;
+      return { completed, total: region.quests.length };
+    }
+
+    // ── Rendering ───────────────────────────────────────────────
+    const checkSvg = `<svg class="quest-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+    const chevronSvg = `<svg class="region-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+
+    function renderRegions() {
+      const container = document.getElementById('regions');
+      let html = '';
+
+      QUEST_DATA.forEach((region, ri) => {
+        const stats = getRegionStats(region);
+        const allDone = stats.completed === stats.total;
+        const collapsed = regionCollapsed[ri] ? ' collapsed' : '';
+        const doneClass = allDone ? ' all-done' : '';
+
+        html += `<div class="region${collapsed}${doneClass}" data-region="${ri}">
+          <div class="region-header" data-region-toggle="${ri}">
+            <div class="region-header-left">
+              <span class="region-name">${region.region}</span>
+              <span class="region-count" id="rc-${ri}">${stats.completed}/${stats.total}</span>
+            </div>
+            ${chevronSvg}
+          </div>
+          <div class="region-body">
+            <div class="region-body-inner">`;
+
+        region.quests.forEach(q => {
+          const done = progress[q.id] ? ' done' : '';
+          html += `<div class="quest${done}" data-quest="${q.id}">
+              <div class="quest-check">${checkSvg}</div>
+              <span class="quest-name">${q.name}</span>
+            </div>`;
+        });
+
+        html += `</div></div></div>`;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function updateProgress() {
+      const stats = getStats();
+      const fill = document.getElementById('progressFill');
+      const statsEl = document.getElementById('progressStats');
+
+      fill.style.width = stats.pct + '%';
+      if (stats.pct === 100) {
+        fill.classList.add('complete');
+      } else {
+        fill.classList.remove('complete');
+      }
+
+      statsEl.innerHTML = `<span class="count">${stats.completed}/${stats.total}</span> <span class="pct">(${stats.pct}%)</span>`;
+    }
+
+    function updateRegionStats(regionIndex) {
+      const region = QUEST_DATA[regionIndex];
+      const stats = getRegionStats(region);
+      const countEl = document.getElementById('rc-' + regionIndex);
+      const regionEl = document.querySelector(`.region[data-region="${regionIndex}"]`);
+
+      if (countEl) {
+        countEl.textContent = stats.completed + '/' + stats.total;
+        countEl.classList.add('pop');
+        setTimeout(() => countEl.classList.remove('pop'), 200);
+      }
+
+      if (regionEl) {
+        if (stats.completed === stats.total) {
+          regionEl.classList.add('all-done');
+        } else {
+          regionEl.classList.remove('all-done');
+        }
+      }
+    }
+
+    // ── Search ──────────────────────────────────────────────────
+    function handleSearch(query) {
+      const q = query.toLowerCase().trim();
+      const clearBtn = document.getElementById('searchClear');
+      const noResults = document.getElementById('noResults');
+      let anyVisible = false;
+
+      clearBtn.classList.toggle('visible', q.length > 0);
+
+      QUEST_DATA.forEach((region, ri) => {
+        const regionEl = document.querySelector(`.region[data-region="${ri}"]`);
+        let regionHasMatch = false;
+
+        region.quests.forEach(quest => {
+          const questEl = regionEl.querySelector(`.quest[data-quest="${quest.id}"]`);
+          if (!questEl) return;
+
+          const nameEl = questEl.querySelector('.quest-name');
+
+          if (!q) {
+            questEl.classList.remove('hidden');
+            nameEl.innerHTML = quest.name;
+            regionHasMatch = true;
+          } else {
+            const idx = quest.name.toLowerCase().indexOf(q);
+            if (idx !== -1) {
+              questEl.classList.remove('hidden');
+              const before = quest.name.slice(0, idx);
+              const match = quest.name.slice(idx, idx + q.length);
+              const after = quest.name.slice(idx + q.length);
+              nameEl.innerHTML = before + '<mark>' + match + '</mark>' + after;
+              regionHasMatch = true;
+            } else {
+              questEl.classList.add('hidden');
+              nameEl.innerHTML = quest.name;
+            }
+          }
+        });
+
+        if (regionEl) {
+          regionEl.style.display = regionHasMatch ? '' : 'none';
+          if (q && regionHasMatch) {
+            regionEl.classList.remove('collapsed');
+          }
+        }
+
+        if (regionHasMatch) anyVisible = true;
+      });
+
+      noResults.classList.toggle('visible', !anyVisible && q.length > 0);
+    }
+
+    // ── Events ──────────────────────────────────────────────────
+    function init() {
+      loadProgress();
+      renderRegions();
+      updateProgress();
+
+      // Quest click (event delegation)
+      document.getElementById('regions').addEventListener('click', (e) => {
+        // Region toggle
+        const headerEl = e.target.closest('[data-region-toggle]');
+        if (headerEl) {
+          const ri = headerEl.dataset.regionToggle;
+          const regionEl = document.querySelector(`.region[data-region="${ri}"]`);
+          regionEl.classList.toggle('collapsed');
+          regionCollapsed[ri] = regionEl.classList.contains('collapsed');
+          return;
+        }
+
+        // Quest toggle
+        const questEl = e.target.closest('.quest');
+        if (questEl) {
+          const id = questEl.dataset.quest;
+          progress[id] = !progress[id];
+          saveProgress();
+
+          questEl.classList.toggle('done', progress[id]);
+          // Re-trigger pulse animation
+          if (progress[id]) {
+            const check = questEl.querySelector('.quest-check');
+            check.style.animation = 'none';
+            check.offsetHeight; // force reflow
+            check.style.animation = '';
+          }
+
+          // Find which region this quest belongs to
+          const regionEl = questEl.closest('.region');
+          const ri = regionEl.dataset.region;
+          updateRegionStats(parseInt(ri));
+          updateProgress();
+        }
+      });
+
+      // Search
+      const searchInput = document.getElementById('searchInput');
+      searchInput.addEventListener('input', () => handleSearch(searchInput.value));
+
+      document.getElementById('searchClear').addEventListener('click', () => {
+        searchInput.value = '';
+        handleSearch('');
+        searchInput.focus();
+      });
+
+      // Reset
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        if (confirm('Reset all progress? This cannot be undone.')) {
+          progress = {};
+          saveProgress();
+          renderRegions();
+          updateProgress();
+        }
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
