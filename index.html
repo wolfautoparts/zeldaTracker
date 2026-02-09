@@ -48,27 +48,79 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* Layered Sheikah-inspired background */
-    body::before {
-      content: '';
+    /* Background container */
+    .bg-layer {
       position: fixed;
       inset: 0;
-      z-index: -2;
-      background:
-        radial-gradient(ellipse at 50% -10%, rgba(92, 224, 210, 0.07) 0%, transparent 55%),
-        radial-gradient(ellipse at 80% 90%, rgba(245, 200, 66, 0.03) 0%, transparent 40%),
-        linear-gradient(135deg, #0a0e17 0%, #121a2b 50%, #0d1520 100%);
+      z-index: -3;
+      overflow: hidden;
     }
 
-    /* Sheikah circuit grid pattern */
-    body::after {
-      content: '';
-      position: fixed;
+    /* Surface map - top half */
+    .bg-surface-map {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      background: url('surface-map.jpg') center center / cover no-repeat;
+      opacity: 0.18;
+    }
+
+    /* Depths map - bottom half */
+    .bg-depths-map {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      background: url('depths-map.jpg') center center / cover no-repeat;
+      opacity: 0.22;
+    }
+
+    /* Divider line between maps */
+    .bg-divider {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-gold), var(--accent-cyan), transparent);
+      opacity: 0.4;
+      z-index: 1;
+    }
+
+    /* Dark overlay for readability */
+    .bg-overlay {
+      position: absolute;
       inset: 0;
-      z-index: -1;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(10, 14, 23, 0.6) 0%, rgba(10, 14, 23, 0.85) 60%),
+        radial-gradient(ellipse at 50% 100%, rgba(10, 14, 23, 0.6) 0%, rgba(10, 14, 23, 0.85) 60%);
+      z-index: 2;
+    }
+
+    /* Master Sword - diagonal through center */
+    .bg-sword {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 500px;
+      height: 500px;
+      transform: translate(-50%, -50%) rotate(-35deg);
+      z-index: 3;
+      opacity: 0.12;
+      filter: drop-shadow(0 0 30px rgba(92, 224, 210, 0.3)) drop-shadow(0 0 60px rgba(92, 224, 210, 0.1));
+    }
+
+    /* Grid overlay on top of everything */
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
       background-image:
-        repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(92, 224, 210, 0.025) 59px, rgba(92, 224, 210, 0.025) 60px),
-        repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(92, 224, 210, 0.025) 59px, rgba(92, 224, 210, 0.025) 60px);
+        repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(92, 224, 210, 0.02) 59px, rgba(92, 224, 210, 0.02) 60px),
+        repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(92, 224, 210, 0.02) 59px, rgba(92, 224, 210, 0.02) 60px);
       pointer-events: none;
     }
 
@@ -487,6 +539,70 @@
   </style>
 </head>
 <body>
+  <!-- Background layers -->
+  <div class="bg-layer">
+    <div class="bg-surface-map"></div>
+    <div class="bg-depths-map"></div>
+    <div class="bg-divider"></div>
+    <div class="bg-overlay"></div>
+    <!-- Master Sword SVG -->
+    <svg class="bg-sword" viewBox="0 0 200 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Blade -->
+      <path d="M100 10 L115 340 L100 360 L85 340 Z" fill="url(#bladeGrad)" />
+      <!-- Blade edge highlights -->
+      <path d="M100 10 L100 360" stroke="rgba(255,255,255,0.4)" stroke-width="0.5"/>
+      <path d="M93 50 L93 330" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+      <path d="M107 50 L107 330" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+      <!-- Blade fuller (center groove) -->
+      <path d="M97 40 L97 320 Q100 330 103 320 L103 40 Q100 30 97 40 Z" fill="rgba(92, 224, 210, 0.15)"/>
+      <!-- Guard / Crossguard - wing shape -->
+      <path d="M100 345 L45 330 Q30 328, 28 340 Q26 352, 45 350 L100 360 L155 350 Q174 352, 172 340 Q170 328, 155 330 Z" fill="url(#guardGrad)"/>
+      <!-- Guard wing tips - curved ends -->
+      <path d="M28 340 Q22 335, 18 340 Q14 345, 28 340" fill="#5ce0d2" opacity="0.5"/>
+      <path d="M172 340 Q178 335, 182 340 Q186 345, 172 340" fill="#5ce0d2" opacity="0.5"/>
+      <!-- Guard center gem -->
+      <ellipse cx="100" cy="350" rx="8" ry="6" fill="#5ce0d2" opacity="0.7"/>
+      <ellipse cx="100" cy="350" rx="4" ry="3" fill="#fff" opacity="0.5"/>
+      <!-- Ricasso (between guard and grip) -->
+      <rect x="92" y="358" width="16" height="12" rx="2" fill="#4a5568"/>
+      <!-- Grip -->
+      <path d="M93 370 L93 440 Q93 445 100 445 Q107 445 107 440 L107 370 Q107 368 100 368 Q93 368 93 370 Z" fill="url(#gripGrad)"/>
+      <!-- Grip wrap pattern -->
+      <path d="M93 378 L107 383" stroke="rgba(92,224,210,0.2)" stroke-width="1.5"/>
+      <path d="M93 388 L107 393" stroke="rgba(92,224,210,0.2)" stroke-width="1.5"/>
+      <path d="M93 398 L107 403" stroke="rgba(92,224,210,0.2)" stroke-width="1.5"/>
+      <path d="M93 408 L107 413" stroke="rgba(92,224,210,0.2)" stroke-width="1.5"/>
+      <path d="M93 418 L107 423" stroke="rgba(92,224,210,0.2)" stroke-width="1.5"/>
+      <path d="M93 428 L107 433" stroke="rgba(92,224,210,0.2)" stroke-width="1.5"/>
+      <!-- Pommel -->
+      <path d="M88 445 Q88 460, 100 465 Q112 460, 112 445 Z" fill="url(#guardGrad)"/>
+      <circle cx="100" cy="453" r="4" fill="#5ce0d2" opacity="0.5"/>
+      <!-- Triforce on blade -->
+      <path d="M100 60 L108 74 L92 74 Z" fill="rgba(245, 200, 66, 0.3)" />
+      <path d="M92 74 L100 88 L84 88 Z" fill="rgba(245, 200, 66, 0.3)" />
+      <path d="M108 74 L116 88 L100 88 Z" fill="rgba(245, 200, 66, 0.3)" />
+      <!-- Gradients -->
+      <defs>
+        <linearGradient id="bladeGrad" x1="100" y1="10" x2="100" y2="360" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#e8e4d9"/>
+          <stop offset="40%" stop-color="#b0bec5"/>
+          <stop offset="100%" stop-color="#78909c"/>
+        </linearGradient>
+        <linearGradient id="guardGrad" x1="30" y1="340" x2="170" y2="340" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#2a5c8a"/>
+          <stop offset="50%" stop-color="#5ce0d2"/>
+          <stop offset="100%" stop-color="#2a5c8a"/>
+        </linearGradient>
+        <linearGradient id="gripGrad" x1="93" y1="370" x2="107" y2="370" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#2d3748"/>
+          <stop offset="50%" stop-color="#4a5568"/>
+          <stop offset="100%" stop-color="#2d3748"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="bg-grid"></div>
+  </div>
+
   <div class="app">
     <header class="header">
       <div class="header-title">
